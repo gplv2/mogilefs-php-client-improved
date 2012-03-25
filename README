@@ -16,11 +16,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 File Authors:
-  Erik Osterman <eosterman@interactivepath.com>
+  Erik Osterman <eosterman AT interactivepath.com>
   Mikhail Mazursky <ash2kk AT gmail>
+  Glenn Plas <glenn AT byte-consult.be>
 
 Thanks to the MogileFS mailing list and the creator of the MediaWiki
 MogileFS client.
+
+For parallel execution, check out the included example.php file. (Glenn)
 
 
 Usage Example:
