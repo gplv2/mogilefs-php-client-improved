@@ -69,8 +69,8 @@ function on_request_done($content, $url, $ch, $search) {
          $replacement = 'EMPTY_mogilefs:';
          $search = preg_replace($pattern, $replacement, $search);
          // It looks like we have an empty file here, this only happens for keys that are in the mogile images db but fysically are not there... 
-         file_put_contents($search, $content, LOCK_EX);
-         // We need to take care of these or the query loop will hang here.
+         file_put_contents($search, "", LOCK_EX);
+         // We need to take care of these in the main process or the loop will hang here.
       }
    }
    /* Clean up, we seem to leak memory somewhere inside php */
