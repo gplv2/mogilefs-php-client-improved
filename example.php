@@ -11,7 +11,7 @@ set_time_limit(0);
 
 $config = array(
       'tracker' => array(
-         'domain' => 'oxynade',
+         'domain' => 'toxicnade',
          'class' => 'images',
          'trackers' => array(
             'server4:7001',
@@ -68,8 +68,7 @@ function on_request_done($content, $url, $ch, $search) {
          $pattern = '/mogilefs:/'; // This is your mogileid prefix from the key, 
          $replacement = 'EMPTY_mogilefs:';
          $search = preg_replace($pattern, $replacement, $search);
-         // It looks like we have an empty file here, this only happens for keys that are in the mogile images db but fysically are not there... I've found 1 in the venue table
-         // /home/oxynade/dump_mogile/temp/mogilefs:511ddf416e1ba3193b48b05ffaee5c78.venueimage
+         // It looks like we have an empty file here, this only happens for keys that are in the mogile images db but fysically are not there... 
          file_put_contents($search, $content, LOCK_EX);
          // We need to take care of these or the query loop will hang here.
       }
