@@ -20,6 +20,7 @@
 /* File Authors:
  *   Erik Osterman <eosterman@interactivepath.com>
  *   Mikhail Mazursky <ash2kk AT gmail>
+ *   Glenn Plas <glenn AT byte-consult.be>>
  *
  * Thanks to the MogileFS mailing list and the creator of the MediaWiki 
  * MogileFS client.
@@ -36,6 +37,9 @@
  * $stop = microtime(true);
  * printf("%.4f\n", $stop - $start);
  */
+
+/* Include Pete Wardens https://github.com/petewarden/ParallelCurl */
+require_once('parallelcurl.php');
 
 class MogileFS {
     const CMD_DELETE = 'DELETE';
@@ -69,6 +73,9 @@ class MogileFS {
     protected $_curlError;
     protected $_curlErrno;
 
+    // An extra, not really used atm
+    protected $_files;
+
     /**
      * Construct an instance.
      *
@@ -85,6 +92,7 @@ class MogileFS {
         $this->setPutTimeout(10.0);
         $this->setGetTimeout(10.0);
         $this->setDebug(false);
+        $this->_files=array();
     }
 
     /**
@@ -520,6 +528,8 @@ class MogileFS {
             throw new Exception(get_class($this) . '::get key cannot be null');
 
         $paths = $this->getPaths($key, null, true);
+        // print_r($paths);
+
         $ch = curl_init();
         if ($ch === false)
             throw new Exception(get_class($this) . '::get curl_init failed');
@@ -553,6 +563,63 @@ class MogileFS {
         curl_close($ch);
         throw new Exception(get_class($this) . "::get unable to retrieve {$key}");
     }
+
+    /**
+     * Get a file array from storage using multi curl and perform a callback function.
+     *
+     * @param array $keylist Array
+     * @param int $max_requests Int
+     * @param string $callback_function String
+     * @param string $temp String
+     *
+     * @return string File contents
+     */
+    public function getArray($keylist, $max_requests=3, $callback_function=null, $temp ) {
+        $this->_curlInfo = null;
+        $this->_curlError = null;
+        $this->_curlErrno = 0;
+
+        if (is_null($keylist)) {
+            throw new Exception(get_class($this) . '::get key cannot be null');
+        }
+
+
+        // if (is_array($keylist['paths'])) {
+        foreach ($keylist as $key => $mog_id) {
+           $keylist[$key]['paths'] = $this->getPaths($mog_id['mogid'], 1, true);
+        }
+        // }
+
+        // Keep track of what we need to download
+        $this->_files = $keylist;
+
+        $options = Array(
+            CURLOPT_VERBOSE => $this->_debug,
+            CURLOPT_CONNECTTIMEOUT_MS => $this->_connectTimeout * 1000,
+            CURLOPT_TIMEOUT_MS => $this->_getTimeout * 1000,
+            CURLOPT_SSL_VERIFYPEER => FALSE,
+            CURLOPT_SSL_VERIFYHOST => FALSE,
+            CURLOPT_FAILONERROR => true,
+            CURLOPT_RETURNTRANSFER => true
+        );
+
+        $parallel_curl = new ParallelCurl($max_requests, $options);
+
+        // The way I use this is the callback writes all files to the temp directory, 
+        // getPath seems to return the paths in random order so I keep trying until it works.
+        // There is a lot of assuming going on but it sure seems to work in reality.
+        $path_id = 1;
+        foreach ($this->_files as $file => $option ) {
+           $id = sprintf("path%d",$path_id);
+           $parallel_curl->startRequest($option['paths'][$id], $callback_function, $temp . DIRECTORY_SEPARATOR . $option['filename']);
+           // echo sprintf("Queued job for '%s'\n",$temp . DIRECTORY_SEPARATOR . $option['filename']) ;
+        }
+        $parallel_curl->finishAllRequests();
+
+        unset($parallel_curl); 
+        // Nothing to return, the callbacks handle the terminated requests
+    }
+
 
     /**
      * Get a file from storage and send it directly to stdout by way of fpassthru().
